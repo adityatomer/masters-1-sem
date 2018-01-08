@@ -1,0 +1,859 @@
+new request t=1
+new request t=2
+
+*******************************************************************
+TESTCASE 1
+CASE : NewRequest - MultiClient - NoFailure
+
+To trigger a New Request for a sequence of Operations
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	'system.pseudorandom.MC.config'
+Commands:
+	1.) python3 -m da -n main RunSystem.da -i system.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n client_1 RunSystem.da 
+	4.) python3 -m da -n replica_0 RunSystem.da 
+	5.) python3 -m da -n replica_1 RunSystem.da 
+	6.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome:- All the clients run their operations through the replicas and recieve the result fopr each of those operations which in turn are validated.
+	PASS
+
+
+*******************************************************************
+TESTCASE 2
+CASE : NewRequest - SingleClient - NoFailure
+
+To trigger a New Request for a sequence of Operations
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	'system.config' 
+Commands:
+	1.) python3 -m da -n main RunSystem.da -i system.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n client_1 RunSystem.da 
+	4.) python3 -m da -n replica_0 RunSystem.da 
+	5.) python3 -m da -n replica_1 RunSystem.da 
+	6.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome:- Client run its operations through the replicas and recieve the result fopr each of those operations which in turn are validated.
+	PASS
+
+*******************************************************************
+
+TESTCASE 3
+CASE : Retransmission - Single Client - No Failure
+
+To trigger a New Request for a sequence of Operations
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	'retransmission.singleClient.config'
+Commands:
+	1.) python3 -m da -n main RunSystem.da -i retrans_system.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n client_1 RunSystem.da 
+	4.) python3 -m da -n replica_0 RunSystem.da 
+	5.) python3 -m da -n replica_1 RunSystem.da 
+	6.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome
+	PASS
+
+
+*******************************************************************
+
+TESTCASE 4
+CASE : Retransmission - Multiple Client - No Failure
+
+To trigger a New Request for a sequence of Operations
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	'retransmission.config'
+Commands:
+	1.) python3 -m da -n main RunSystem.da -i retrans_system.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n client_1 RunSystem.da 
+	4.) python3 -m da -n replica_0 RunSystem.da 
+	5.) python3 -m da -n replica_1 RunSystem.da 
+	6.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome
+	PASS
+
+*******************************************************************
+
+TESTCASE 5
+CASE : Failure when Replica(HEAD) 0 changes the operation for next message
+failures[0,0] = client_request(0,2),change_operation();shuttle(0,5),change_operation(): 
+
+To trigger a New Request for a sequence of Operations
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	'1.head_CR_CO.config'
+Commands:
+	1.) python3 -m da -n main RunSystem.da -i retrans_system.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	4.) python3 -m da -n replica_0 RunSystem.da 
+	5.) python3 -m da -n replica_1 RunSystem.da 
+	6.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome
+	pass
+
+
+******************************************************************
+
+TESTCASE 6
+CASE : Failure when Replica(HEAD) 0 changes the operation for next message
+failures[0,0] = client_request(0,2),change_operation();shuttle(0,5),change_operation() ::In case of MultiClient
+
+To trigger a New Request for a sequence of Operations
+Description:
+	t failure=1
+	client=1
+	replica=3
+configuration_file_name
+	'1.head_CR_CO_MC.config'
+Commands:
+	1.) python3 -m da -n main RunSystem.da -i retrans_system.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	4.) python3 -m da -n replica_0 RunSystem.da 
+	5.) python3 -m da -n replica_1 RunSystem.da 
+	6.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome
+	pass
+
+*******************************************************************
+
+TESTCASE 7
+CASE : failures[0,1] = shuttle(0,2),drop_result_stmt()
+Failure when 2nd Replica drops the head replicas resultstatement from result_proof
+
+Description:
+	t failure=1
+	client=1
+	replica=3
+configuration_file_name
+	"5.nonHead.SH.DRS.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/5.nonHead.SH.DRS.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome scenario
+	fail
+explaination:
+	when 2nd replica drops the head replica resultstatement from resultproof and forward the shuttle to next replica(tail in our case). Tail replica
+		CASE 1. forward the response to client
+		CASE 2. cache the wrong result proof shuttle
+		CASE 3. forward the shuttle to previous replica
+
+		In 1st CASE , since the resultproof is invalid, validation fails at client, client does retransmission in this case and forward the
+		request to all replicas. Since the tail replica have a wrong resultproof cached, it forwards the request to client. All other replicas
+		does not find anything in their cache and forward the request to head replica. Since the client gets the wrong resultproof and cannot retransmit,
+		retransmission operation timesout. Now since the second requests comes with slot 2 - and the shuttle has not been updated on replica 1(non head replica), this replica doesnt have any entry for slot 1 as the validation of order proof had failed.
+
+
+*******************************************************************
+
+TESTCASE 8
+CASE : failures[0,2] = shuttle(0,2),change_result()
+Failure when tail Replica changes its result from resultproof
+
+Description:
+	t failure=1
+	client=1
+	replica=3
+configuration_file_name
+	"6.Tail.RS.CR.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/6.Tail.RS.CR.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome scenario
+	fail
+explaination:
+	when tail replica changes the result from resultproof. 
+		CASE 1. forward the result_proof to client
+		CASE 2. cache the wrong result proof shuttle
+		CASE 3. forward the shuttle to previous replica
+		
+		In 1st CASE , since the resultproof is invalid, validation fails at client, client does retransmission in this case and forward the
+		request to all replicas. Since the tail replica have a wrong resultproof cached, it forwards the request to client. All other replicas
+		does not find anything in their cache and forward the request to head replica. Since the client gets the wrong resultproof and cannot retransmit,
+		retransmission operation timesout.
+
+
+*******************************************************************
+
+TESTCASE 9
+failures[0,2] = shuttle(0,2),drop_result_stmt()
+
+Failure when tail Replica drops the head replicas resultstatement from result_proof
+
+Description:
+	t failure=1
+	client=1
+	replica=3
+configuration_file_name
+	"7.Tail.SH.DRS.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/7.Tail.SH.DRS.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome scenario
+	fail
+explaination:
+	when 2nd tail drops the head replica resultstatement from resultproof and forward the shuttle to next replica(tail in our case). Tail replica
+		CASE 1. forward the result_proof to client
+		CASE 2. cache the wrong result proof shuttle
+		CASE 3. forward the shuttle to previous replica
+		
+		In 1st CASE , since the resultproof is invalid, validation fails at client, client does retransmission in this case and forward the
+		request to all replicas. Since the tail replica have a wrong resultproof cached, it forwards the request to client. All other replicas
+		does not find anything in their cache and forward the request to head replica. Since the client gets the wrong resultproof and cannot retransmit,
+		retransmission operation timesout.
+
+*******************************************************************
+
+
+TESTCASE 10
+failures[0,2] = result_shuttle(0,2),change_result()
+
+Failure when tail Replica drops the head replicas resultstatement from result_proof
+
+Description:
+	t failure=1
+	client=1
+	replica=3
+configuration_file_name
+	"8.Tail.RS.CR.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/8.Tail.RS.CR.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome scenario
+	fail
+explaination:
+	when 2nd tail drops the head replica resultstatement from resultproof and forward the shuttle to next replica(tail in our case). Tail replica
+		CASE 1. forward the result_proof to client
+		CASE 2. cache the wrong result proof shuttle
+		CASE 3. forward the shuttle to previous replica
+		
+		In 1st CASE , since the resultproof is invalid, validation fails at client, client does retransmission in this case and forward the
+		request to all replicas. Since the tail replica have a wrong resultproof cached, it forwards the request to client. All other replicas
+		does not find anything in their cache and forward the request to head replica. Since the client gets the wrong resultproof and cannot retransmit,
+		retransmission operation timesout.
+
+
+*******************************************************************
+
+TESTCASE 11
+failures[0,1] = result_shuttle(0,2),drop_result_stmt()
+
+Failure when nonHead Replica changes the result from result shuttle and forwards to prev replica while coming from tail to head.
+
+Description:
+	t failure=1
+	client=1
+	replica=3
+configuration_file_name
+	"9.tail.RS.DRS.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/9.tail.RS.DRS.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome scenario
+	fail
+explaination:
+	when 2nd nonHead Replica changes the result from result shuttle and forward the shuttle to prev replica(head in our case). head replica
+		CASE 1. validates the result proof and fails
+		
+
+*******************************************************************
+
+
+TESTCASE 12
+CASE : failures[0,1] = shuttle(0,2),drop_result_stmt()
+Failure when 2nd Replica drops the head replicas resultstatement from result_proof
+
+Description:
+	t failure=1
+	client=1
+	replica=3
+configuration_file_name
+	"5.nonHead.SH.DRS.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/5.nonHead.SH.DRS.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome scenario
+	fail
+explaination:
+	when 2nd replica drops the head replica resultstatement from resultproof and forward the shuttle to next replica(tail in our case). Tail replica
+		CASE 1. forward the response to client
+		CASE 2. cache the wrong result proof shuttle
+		CASE 3. forward the shuttle to previous replica
+
+		In 1st CASE , since the resultproof is invalid, validation fails at client, client does retransmission in this case and forward the
+		request to all replicas. Since the tail replica have a wrong resultproof cached, it forwards the request to client. All other replicas
+		does not find anything in their cache and forward the request to head replica. Since the client gets the wrong resultproof and cannot retransmit,
+		retransmission operation timesout. Now since the second requests comes with slot 2 - and the shuttle has not been updated on replica 1(non head replica), this replica doesnt have any entry for slot 1 as the validation of order proof had failed.
+
+*******************************************************************
+
+
+TESTCASE 13
+CASE : failures[0,0] = shuttle(0,2),change_operation()
+	   failures[0,2] = shuttle(0,1),change_result()
+
+This case involves two different clients performing their operations concurrently as well injecting the failures also concurrently.
+
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"multiClient_multiFailure.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/multiClient_multiFailure.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	2.) python3 -m da -n client_1 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome  is as expected.
+
+
+*******************************************************************
+
+
+TESTCASE 14
+CASE : failures[0,0] = shuttle(0,2),change_operation()
+	   failures[0,2] = shuttle(0,1),change_result()
+
+This case involves two different clients performing their operations concurrently as well injecting the failures also concurrently.
+
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"multiFailure.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/multiFailure.config 
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome  is as expected
+
+
+*******************************************************************
+
+TESTCASE 15
+CASE : failures[0,1] = result_shuttle(0,2),change_result()
+Failure when tail Replica changes its result from resultproof
+
+Description:
+	t failure=1
+	client=1
+	replica=3
+configuration_file_name
+	"4.nonhead_RS.CR.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/4.nonhead_RS.CR.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome scenario
+	fail
+
+
+*******************************************************************
+	
+TESTCASE 15
+CASE : failures[0,1] = result_shuttle(0,2),change_result(): MultiClient
+Failure when tail Replica changes its result from resultproof
+
+Description:
+	t failure=1
+	client=1
+	replica=3
+configuration_file_name
+	"4.nonhead_RS.CR_MC.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/4.nonhead_RS.CR.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n replica_0 RunSystem.da 
+	4.) python3 -m da -n replica_1 RunSystem.da 
+	5.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+outcome scenario
+	fail
+
+
+*******************************************************************
+
+TESTCASE 16 
+
+PSEUDORANDOM generation on multiple client
+
+Failure when nonHead Replica changes the result from result shuttle and forwards to prev replica while coming from tail to head.
+
+workload[0] = pseudorandom(233,5)
+workload[1] = put('movie','star'); append('movie',' wars'); get('movie')
+
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"11.MC.Pseudorandom.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/11.MC.Pseudorandom.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n client_1 RunSystem.da 
+	4.) python3 -m da -n replica_0 RunSystem.da 
+	5.) python3 -m da -n replica_1 RunSystem.da 
+	6.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+explaination:
+	Given a pseudorandom workload example seed 233 and 5 operation. 5 deterministic random operations are generated. The key and values are random which will regenerated in the same sequence for a given seed.
+
+
+*******************************************************************
+
+TESTCASE 17
+
+PSEUDORANDOM generation on multiple client
+
+Failure when nonHead Replica changes the result from result shuttle and forwards to prev replica while coming from tail to head.
+
+workload[0] = pseudorandom(2300,1000)
+
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"pseudorandom_large.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da -n main RunSystem.da -i ../config/pseudorandom_large.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da -n client_0 RunSystem.da 
+	3.) python3 -m da -n client_1 RunSystem.da 
+	4.) python3 -m da -n replica_0 RunSystem.da 
+	5.) python3 -m da -n replica_1 RunSystem.da 
+	6.) python3 -m da -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+explaination:
+	Given a pseudorandom stress workload example seed 2300 and 1000 operation. 1000 deterministic random operations are generated. The key and values are random which will regenerated in the same sequence for a given seed. The client will send these operations to the replicas.
+
+*******************************************************************
+
+TESTCASE 18
+
+Pfailures[0,1] = shuttle(0,3),change_operation();wedge_request(-1,1),sleep(5)
+
+Failure when nonHead Replica changes the operation  while the shuttle is going from head to Tail, which then is detected by the next replica and causes
+reconfiguration, in reconfiguration when wedge request is sent to the replica it sleeps for the specified time forcing them to attain quorum without that
+replica or wait for it to come oput of sleep.
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie')
+
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"ph3_1.wedge_Sleep.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/ph3_1.wedge_Sleep.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+
+*******************************************************************
+
+TESTCASE 19
+
+failures[0,0] = checkpoint(-1,0),crash()
+failures[1,1] = new_configuration(-1,2),crash()
+
+Failure when Head  Replica crashes  as soon as first checkpoint message us recieved, after new congigurationis recieved again crash occurs at
+NonHead replica
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie')
+
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"ph3_10.checkpoint_crash_new_configuration_crash_.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/ph3_10.checkpoint_crash_new_configuration_crash_.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+
+*******************************************************************
+
+TESTCASE 20
+
+failures[0,1] = shuttle(0,3),change_operation()
+failures[0,0] = wedge_request(-1,1),extra_op(2)
+
+Failure when nonHead Replica changes the operation  while the shuttle is going from head to Tail, which then is detected by the next replica and causes
+reconfiguration, in reconfiguration when wedge request is sent to the replica it applies an extra operation to its dictionary. Now quorum needs to be found
+without this replica else the state will be inconsistent
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie')
+
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"ph3_10.wedge_extraop.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/ph3_10.wedge_extraop.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+*******************************************************************
+
+TESTCASE 21
+
+failures[0,1] = shuttle(0,2),change_operation();get_running_state(-1,1),sleep(12)
+failures[0,0] = get_running_state(-1,1),sleep(12)
+failures[0,2] = get_running_state(-1,1),sleep(12)
+
+Failure when nonHead Replica changes the operation  while the shuttle is going from head to Tail, which then is detected by the next replica and causes
+reconfiguration, in reconfiguration when running state request is sent to the replica it sleeps for a given time .the timeout occurs at the olympus
+it sends request to another replica for the runnign state and keeps doing that until a result is recieved from one of them.
+without this replica else the state will be inconsistent
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie')
+
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"ph3_12.runningstate_sleep_.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/ph3_12.runningstate_sleep_.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+*******************************************************************
+TESTCASE 21
+
+failures[0,0] = checkpoint(-1,1),increment_slot()
+
+Failure when nonHead Replica changes the slot when checkpoint statement is recieved, since this might cause slot inconsistency reconfiguration wil 
+be called
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie');get('movie');get('movie')
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"ph3_3.checkpointing_incrment_slot.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/pph3_3.checkpointing_incrment_slot.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+*******************************************************************
+TESTCASE 22
+
+failures[0,0] = checkpoint(-1,1),increment_slot()
+
+Failure when nonHead Replica changes the slot when checkpoint statement is recieved, since this might cause slot inconsistency reconfiguration wil 
+be called
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie');get('movie');get('movie')
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"ph3_3.checkpointing_incrment_slot.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/pph3_3.checkpointing_incrment_slot.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+*******************************************************************
+TESTCASE 23
+
+failures[0,1] = shuttle(0,2),change_operation();get_running_state(-1,1),extra_op()
+failures[0,0] = get_running_state(-1,1),extra_op()
+failures[0,2] = get_running_state(-1,1),extra_op()
+
+Failure when nonHead Replica changes the operation  while the shuttle is going from head to Tail, which then is detected by the next replica and causes
+reconfiguration, in reconfiguration when running state request is sent to the replica it applies an extraoperation .the running state diesnt match with 
+it sends request to another replica for the runnign state and keeps doing that until a result is recieved from one of them.
+
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie');get('movie');get('movie')
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"ph3_4.running_state_extra_op_.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/ph3_4.running_state_extra_op_.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+*******************************************************************
+TESTCASE 25
+
+failures[0,1] = shuttle(0,2),change_operation();get_running_state(-1,1),drop()
+failures[0,0] = get_running_state(-1,1),drop()
+failures[0,2] = get_running_state(-1,1),drop()
+
+Failure when nonHead Replica changes the operation  while the shuttle is going from head to Tail, which then is detected by the next replica and causes
+reconfiguration, in reconfiguration when wedge request is sent to the replica it applies an extraoperation .the running state diesnt match with 
+it sends request to another replica for the runnign state and keeps doing that until a result is recieved from one of them.
+
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie');get('movie');get('movie')
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"ph3_4.wedge_extra_op_.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/ph3_4.running_state_extra_op_.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+*******************************************************************
+
+TESTCASE 26
+
+failures[0,1] = shuttle(0,2),change_operation()
+# failures[0,1] = wedge_request(-1,1),drop()
+failures[0,2] = catch_up(-1,1),drop()
+
+Failure when nonHead Replica changes the operation  while the shuttle is going from head to Tail, which then is detected by the next replica and causes
+reconfiguration, in reconfiguration when cath up  is sent to the replica it drops th request . the timer expires at olympus and new quorum is looked for
+
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie');get('movie');get('movie')
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"phase3_catch_up_drop.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/phase3_catch_up_drop.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+*******************************************************************
+TESTCASE 27
+
+failures[0,0] = shuttle(0,1),invalid_order_sig();shuttle(0,5),change_operation()
+
+
+In case of shuttle when the given message is recieved the signature is forge into invslid which then is checked at next replica causing reconfiguration
+
+
+workload[0] = put('movie','star'); append('movie','wars'); slice('movie':'4:7');get('movie');get('movie');get('movie')
+Description:
+	t failure=1
+	client=2
+	replica=3
+configuration_file_name
+	"phase3_invalid_order_sign.config"
+Commands(When all commands are executed from sourcefolder):
+	1.) python3 -m da --message-buffer-size 20000 -n main RunSystem.da -i ../config/phase3_invalid_order_sign.config
+				-i parameter helps to define the particular config file. It contains properties specific to retransmission, like
+				sleep time at replica, retransmission counter, client timeout specific to retransmission, which will trigger retransmission.
+	2.) python3 -m da --message-buffer-size 20000 -n client_0 RunSystem.da 
+	3.) python3 -m da --message-buffer-size 20000 -n client_1 RunSystem.da 
+	4.) python3 -m da --message-buffer-size 20000 -n replica_0 RunSystem.da 
+	5.) python3 -m da --message-buffer-size 20000 -n replica_1 RunSystem.da 
+	6.) python3 -m da --message-buffer-size 20000 -n replica_2 RunSystem.da 
+log_file_name
+	run_system.log
+
+*******************************************************************
+
+PERFORMANCE EVALUATION COMPARED WITH RAFT ON SINGLE HOST:
+RAFT : 9 seconds
+BCR: : 31 seconds
+
+PERFORMANCE EVALUATION COMPARED WITH RAFT ON MULTIPLE HOST:
+RAFT : 9 seconds
+BCR: : 39 seconds
+
+
+
+
+

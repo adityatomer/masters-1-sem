@@ -1,0 +1,453 @@
+import config
+import os
+import nacl.utils
+import nacl.encoding
+import nacl.signing
+from nacl.public import PrivateKey, Box
+import logging as logger
+import sys
+import time
+import getopt
+import random
+
+class Olympus(process):
+	def setup(configFilePath):
+		logger.info("Olympus setup Called. Self: "+str(self))
+		self.configFilePath=configFilePath
+		self.replicas = []
+		self.clients = []
+		self.wedge_statement=[]
+		self.isQuorumSatisfied = False
+		self.slotOpSuperset= {}
+		self.quorumReplica=[]
+		self.currentnumofConfiguration = 0
+		self.configuration = 0
+		self.clientVerifyKeys=[]
+		self.currentHash =''
+		self.caughtUpStatements =[]
+		self.runningStateReplicaHash=[]
+		self.clientLastResult={}
+		self.replicaVerifyKeys = []
+		self.initHist ={}
+		self.reconfigIsCalled=False
+		self.QuorumList=[]
+		self.catchupFlag=False
+		self.runningStateFlag=False
+
+		# config.config_main(configFilePath);	# initialize configuration file
+	
+	def run():
+		logger.info("*********RUN : Olympus***********")
+		(clients, clientSignKeys, clientVerifyKeys)=createClient()
+		self.clients=clients
+		(replicas,replicaSigningKeys,replicaVerifyKeys)=createReplicas(clients,self,clientVerifyKeys,self.initHist)
+		self.replicas = replicas
+		self.replicaVerifyKeys = replicaVerifyKeys
+		self.clientVerifyKeys = clientVerifyKeys
+		setupAndRunClients(self,replicas,replicaVerifyKeys,clients,clientSignKeys)
+		# logger.info("Failures for this Run => "+str(config.readFailures()))
+		await(received('',))
+		# start(self)
+
+	def main():
+		pass	
+
+	def setup_keys(replicas):
+		logger.info("Setting up Keys for replicas. Total Keys to generate : "+str(len(replicas)))
+		replicaSigningKeys = {}
+		replicaVerifyKeys = {}
+		for i,rep in enumerate(replicas):
+			signing_key = nacl.signing.SigningKey.generate()
+			verify_key = signing_key.verify_key
+			verify_key_hex = verify_key.encode(encoder=nacl.encoding.HexEncoder)
+			replicaSigningKeys[i] = signing_key;
+			replicaVerifyKeys[i] = verify_key_hex;
+		keys = []
+		keys.append(replicaSigningKeys)
+		keys.append(replicaVerifyKeys)
+		
+		return tuple(keys)
+
+	def setup_client_key(totalClients,clients):
+		clientSignKeys={}
+		clientVerifyKeys={}
+		for i,rep in enumerate(clients):
+			signing_key = nacl.signing.SigningKey.generate()
+			verify_key = signing_key.verify_key
+			verify_key_hex = verify_key.encode(encoder=nacl.encoding.HexEncoder)
+			clientSignKeys[i] = signing_key;
+			clientVerifyKeys[i] = verify_key_hex;
+		keys = []
+		keys.append(clientSignKeys)
+		keys.append(clientVerifyKeys)
+		return tuple(keys)
+
+	def createClient():
+		totalClients = config.readProperty("num_client")
+		clientHosts = config.readProperty("client_hosts")
+		clientBaseName = "client_"
+		clientList=[]
+		clients=[]
+		client = import_da('Client')
+		for i in range(0,totalClients):
+			nodeName = clientBaseName+str(i)#+"@"+clientHosts[i];
+			clListTemp = new(client.Client,num=1, at=nodeName)
+			clientList.extend(clListTemp)
+		clients = list(clientList)
+		logger.info("clients => "+str(clients));
+		(clientSignKeys, clientVerifyKeys) =setup_client_key(totalClients,clients)
+		return (clients, clientSignKeys, clientVerifyKeys)
+
+	def setupAndRunClients(olympus,replicas,replicaVerifyKeys,clients,clientSignKeys):
+		for cnum,cli in enumerate(clients):
+			operationList = config.readProperty("workload["+str(cnum)+"]");
+			logger.info("Operations for client : "+str(cli)+" => "+str(operationList))
+			setup(cli,[self.configFilePath,operationList,olympus,replicas,cli,replicaVerifyKeys,clientSignKeys[cnum]])
+			start(cli)
+
+	def createReplicas(clients,olympus,clientVerifyKeys, initHist):
+		logger.info("function called to create new configuration of replicas")
+		if(len(self.replicas) > 0):
+			killOldReplicas()
+		num_replica = 2* int(config.readProperty("t")) + 1
+		replica_hosts = config.readProperty("replica_hosts")
+		replicaBaseName = "replica_";
+		replicas=[]
+		replica = import_da('Replica')
+		for i in range(0,num_replica):
+			nodeName = replicaBaseName+str(i)#+"@"+replicaHosts[i];
+			reListTemp = new(replica.Replica,num=1, at=nodeName)
+			replicas.extend(reListTemp)
+		logger.info("replicas => "+str(replicas))#,", replica_hosts : ",replica_hosts);
+		
+		(replicaSigningKeys,replicaVerifyKeys) = setup_keys(replicas);
+		# print("replicaToPubPrivKey : ",replicaToPubPrivKey, " , replicaToPubKeys : ",replicaToPubKeys)
+		##Setting up Replica
+		replicaBaseName = "replica_"
+		for rnum,rep in enumerate(replicas):
+			# replicaName = replicaBaseName+str(rnum)
+			replica_state = "ACTIVE"
+			if rnum == 0:
+				prevReplica = None
+				nextReplica = replicas[rnum+1]
+			elif rnum == num_replica-1:
+				prevReplica = replicas[rnum-1]
+				nextReplica = None
+			else:
+				nextReplica = replicas[rnum+1]
+				prevReplica = replicas[rnum-1]
+			# setup(rep,[clients[0],olympus,replicaName,prevReplica,nextReplica])
+			# print("replica : ",rep,", replicaToPubPrivKey: ",replicaToPubPrivKey[str(rep)])
+			# setup(rep,[clients[0],olympus,replicaName,prevReplica,nextReplica,None,None])
+			setup(rep,[initHist,self.currentnumofConfiguration,self.configFilePath,replicas,clients,olympus,rep,prevReplica,nextReplica,replicas[0],replicas[len(replicas)-1],replica_state,replicaSigningKeys[rnum],replicaVerifyKeys,clientVerifyKeys])
+
+		##Starting Replica
+		for rep in replicas:
+			start(rep)
+
+		return (replicas,replicaSigningKeys,replicaVerifyKeys)
+
+	def receive(msg=('RECONFIGURATION_REQUEST', configuration), from_=node):
+		# client.reconfigFlag=True
+		logger.info("RECONFIGURATION_REQUEST request recieved from  Replica : " + str(node) + ":configuration number :"+str(configuration) + ", :current configuration number :"+str(self.currentnumofConfiguration))
+		if(not self.reconfigIsCalled):
+			self.reconfigIsCalled=True
+			updateClientForReconfiguration()
+			if (configuration >= self.currentnumofConfiguration):
+				# self.currentnumofConfiguration = self.currentnumofConfiguration + 1
+				sendWedgeStatements()
+				self.currentnumofConfiguration = self.currentnumofConfiguration + 1
+				self.wedge_statement = []	
+				self.slotOpSuperset={}
+				self.currentHash=''
+				self.caughtUpStatements =[]
+				self.runningStateReplicaHash=[]
+				self.isQuorumSatisfied=False
+
+	def sendWedgeStatements():
+		for rnum,rep in enumerate(self.replicas):
+			logger.info("WEDGE_REQUEST_STATEMENT sent to replica : " + str(rep))
+			send(('WEDGE_REQUEST_STATEMENT',), to=rep)
+
+	def receive(msg=('WEDGE_STATEMENT', checkpoint, history), from_=node):
+		logger.info("WEDGE_STATEMENT recieved from replica: " +str(node))
+		tupl = (checkpoint, history, node)
+		self.wedge_statement.append(tupl)
+		if(len(self.wedge_statement) == len(self.replicas)):
+			logger.info("WEDGE_STATEMENT all wedge_statement received")
+			for repl in self.wedge_statement:
+				checkpoint, Hisotry, replica = repl
+				for i in Hisotry:
+					slot,operation,rep_op,client,req_id,order = i
+					op = config.getUnsignedData(operation, client, self.clientVerifyKeys,self.clients)
+		if (not self.isQuorumSatisfied  and len(self.wedge_statement)>= config.readProperty("t") + 1):
+			self.slotOpSuperset={}
+			checkForQuorum()
+
+	def checkForQuorum():
+		self.caughtUpStatements =[]
+		self.clientLastResult = {}
+		self.runningStateReplicaHash=[]
+		self.QuorumList=[]
+		quorumCount =0 
+		consistent = True
+		counter = 1 
+		quorum=[]
+		logger.info("Inside the function checking quorum and length of wedge statements is " + str(len(self.wedge_statement)))
+		num_replica_for_quorum = config.readProperty("t") + 1 
+		while ( self.isQuorumSatisfied == False and counter < len(self.wedge_statement)):
+			logger.info("checking for Quorum")
+			if(len(self.wedge_statement)>=num_replica_for_quorum):
+				for repl in self.wedge_statement:
+					if( not self.isQuorumSatisfied):
+						logger.info("Inside loop of self.wedge_statement")
+						checkpoint, Hisotry, replica = repl
+						consistent = True
+						slots=[]
+						# print(Hisotry[0])
+						for i in range(0,len(Hisotry)):
+							slot,operation,rep_op,client,req_id,order  = Hisotry[i]
+							slots.append(slot)
+						for j in range(len(Hisotry)):
+							# logger.info("j: "+str(j)+", len(Hisotry): "+str(len(Hisotry)))
+							slot,operation,rep_op,client,req_id,order = Hisotry[j]
+							op = config.getUnsignedData(operation, client,self.clientVerifyKeys,self.clients)
+							logger.info("contents for Replica: " + str(replica)+ "  wedge statement. slot:  " + str(slot) + ",  operation: "+ str(op)+ ",  client: " + str(client)+", j: "+str(j) +", checking in history : length " + str(len(Hisotry)))
+							slotOk=True
+							for i in range (len(slots)-1):
+								if(slots[i+1] != slots[i] +1):
+									slotOk=False
+							logger.debug("Are the slots consistent:::" + str(slotOk) +"\n")
+							if(op == rep_op):
+								if(slot not in self.slotOpSuperset.keys()):
+									self.slotOpSuperset[slot]=op
+								else:
+									if(self.slotOpSuperset[slot] != op):
+										consistent = False
+										break
+							else: 
+								consistent = False
+						if(consistent):
+							quorum.append(repl)
+							quorumCount = quorumCount + 1
+						if(quorumCount >= num_replica_for_quorum ):
+							self.isQuorumSatisfied=True
+							logger.info("**************Quorum Reached**************")
+							self.QuorumList = quorum
+
+							checkForLongestHistory(quorum)
+					counter = counter +1
+			if(not self.isQuorumSatisfied):
+				logger.debug("shifting the wedge statement by 1 bit to maintain the superslot for next item")
+				if(counter < len(self.wedge_statement)):
+					self.wedge_statement= self.wedge_statement[1:] + self.wedge_statement[:1]
+					# a,b =  self.wedge_statement.items()[counter]
+					# checkpoint, bhistory  = b
+					self.slotOpSuperset={}
+					# for i in bhistory:
+					# 	slot,operation,rep_op,client,order = i
+					# 	op = config.getUnsignedData(operation, client)
+					# 	self.slotOpSuperset[slot]=operation
+					checkForQuorum()
+
+	def checkForLongestHistory(quorum):
+		logger.info("checkForLongestHistory quorum of valid consistent histories is available :::quorum count :"+str(len(quorum)))
+		maxHistory =0
+		maxHistoryReplica=''
+		slots=[]
+		temp=[]	
+		catchup_messages={}
+		for rep in quorum:
+			checkpoint,history, replica = rep
+			if(len(history) > maxHistory):
+				maxHistory = len(history)
+				maxHistoryReplica = (rep,history)
+		logger.info("max History Length: " + str(maxHistory))
+		for rep in  quorum:
+			slots=[]
+			temp=[]
+			checkpoint,history, replica= rep
+			# if(replica == self.replicas[1]):
+			# 	history =  history[0:2]
+			for i in history:
+				slot,operation,rep_op,client,req_id,order  = i
+				slots.append(slot)
+			logger.info("slots present in the history of replica: " + str(replica) + ":: " + str(slots))
+			if(len(maxHistoryReplica)==0):
+				catchup_messages[replica] = temp
+			else:
+				rep, hist = maxHistoryReplica
+				for hist_item in hist:
+					slot_maxH,operation_maxH,rep_op_maxH,client_maxH,req_id_maxH,order_max_H = hist_item
+					# op = config.getUnsignedData(operation_maxH, client_maxH,self.clientVerifyKeys,self.clients)
+					if  (len(slots)==0) or ( slot_maxH not in slots and slot_maxH > max(slots)):
+						logger.info("slot  "+ str(slot_maxH) + "  is not in history of replica " + str(replica))
+
+						tupl = (slot_maxH,operation_maxH,client_maxH,req_id_maxH)
+						temp.append(tupl)
+				catchup_messages[replica] = temp
+		# i have catchup messages for allt he replica sin the quorum
+		logger.info("catch up messages have been formed and will be sent to replicas.")
+		logger.debug("catch up messages have been formed and will be sent to replicas => " +str(catchup_messages))
+		callForCatchupToReplicas(catchup_messages)
+
+	# def callForCatchupToReplicas( catchup_messages):
+	# 	self.caughtUpStatements=[]
+	# 	for rep in catchup_messages.keys():
+	# 		logger.info("sending CATCH_UP up message to replica" + str(rep) + "length od content is :" + str(len(catchup_messages[rep])))
+	# 		# send(('WEDGE_REQUEST_STATEMENT',), to=rep)
+	# 		send(('CATCH_UP',catchup_messages[rep],), to=rep)
+
+	# def receive(msg=('CAUGHT_UP', runningStateHash, clientLastResult), from_=node):
+	# 	logger.info("caught up received from replica :"+ str(node))
+	# 	#ASSUMING ALL REPLICAS SEND THE CAUGHTUP
+
+	# 	allHashSame=True
+	# 	self.clientLastResult = clientLastResult
+	# 	self.runningStateReplicaHash.append(runningStateHash)
+	# 	tupl=(runningStateHash,clientLastResult,node)
+	# 	self.caughtUpStatements.append(tupl)
+	# 	catch_up_timeout=2
+	# 	num_replica_for_quorum = config.readProperty("t") + 1 
+	# 	if(num_replica_for_quorum == len(self.caughtUpStatements)):
+	# 		for i in range(len(self.runningStateReplicaHash)):
+	# 			if(self.runningStateReplicaHash[0] !=  self.runningStateReplicaHash[i]):
+	# 				allHashSame = False
+	# 		if(allHashSame):
+	# 			self.currentHash = self.runningStateReplicaHash[0]
+	# 			getRunningState(self.caughtUpStatements)
+	# 		else:
+	# 			logger.info("Hash aren't consistent we need to find another quorum")
+	# 			self.wedge_statement= self.wedge_statement[1:] + self.wedge_statement[:1]
+	# 			self.slotOpSuperset={}
+	# 			self.isQuorumSatisfied = False
+	# 			checkForQuorum()
+
+	def callForCatchupToReplicas( catchup_messages):
+		self.caughtUpStatements=[]
+		for rep in catchup_messages.keys():
+			logger.info("sending CATCH_UP up message to replica" + str(rep) + "length of content is :" + str(len(catchup_messages[rep])))
+			# send(('WEDGE_REQUEST_STATEMENT',), to=rep)
+			send(('CATCH_UP',catchup_messages[rep],), to=rep)
+
+		timeout=2
+		self.catchupFlag=False
+		if await(self.catchupFlag==True):
+			logger.info("catch_up requests successfully received from all replicas")
+		elif(timeout(timeout)):
+			self.catchupFlag=False
+			logger.info("catchup request timeout")
+			self.wedge_statement= self.wedge_statement[1:] + self.wedge_statement[:1]
+			self.slotOpSuperset={}
+			self.isQuorumSatisfied = False
+			checkForQuorum()
+
+
+	def receive(msg=('CAUGHT_UP', runningStateHash, clientLastResult), from_=node):
+		logger.info("caught up received from replica :"+ str(node))
+		#ASSUMING ALL REPLICAS SEND THE CAUGHTUP
+		allHashSame=True
+		self.clientLastResult = clientLastResult
+		self.runningStateReplicaHash.append(runningStateHash)
+		tupl=(runningStateHash,clientLastResult,node)
+		self.caughtUpStatements.append(tupl)
+		num_replica_for_quorum = config.readProperty("t") + 1 
+		if(num_replica_for_quorum == len(self.caughtUpStatements)):
+			for i in range(len(self.runningStateReplicaHash)):
+				self.catchupFlag=True
+				if(self.runningStateReplicaHash[0] !=  self.runningStateReplicaHash[i]):
+					allHashSame = False
+			if(allHashSame):
+				self.currentHash = self.runningStateReplicaHash[0]
+				getRunningState(self.caughtUpStatements)
+			else:
+				logger.info("Hash aren't consistent we need to find another quorum")
+				self.wedge_statement= self.wedge_statement[1:] + self.wedge_statement[:1]
+				self.slotOpSuperset={}
+				self.isQuorumSatisfied = False
+				checkForQuorum()
+
+	def receive(msg=('RUNNING_STATE', runningState,), from_=node):
+		logger.info("RUNNING_STATE received from Replica: "+str(node))
+		runningStateHash = config.calculateHash(str(runningState))
+		if(str(runningStateHash) == str(self.currentHash)):
+			self.initHist = runningState
+			logger.info("Creating new set of replicas with new running state")
+			(replicas,replicaSigningKeys,replicaVerifyKeys)=createReplicas(self.clients,self,self.clientVerifyKeys,self.initHist)
+			# (replicas,replicaSigningKeys,replicaVerifyKeys)=createReplicas(clients,self,clientVerifyKeys)
+			self.replicas = replicas
+			self.replicaVerifyKeys = replicaVerifyKeys
+			updateClient(replicas,replicaVerifyKeys)
+			self.reconfigIsCalled = False	
+			self.runningStateFlag = True
+			logger.info("*****************RECONFIGURATION SUCCESS !! ****************")			
+		else:
+			logger.error("running state hash do not match with current hash at olympus, calling running_state again, by timing out")
+			getRunningState(self.caughtUpStatements)
+
+	def getRunningState(caughtUpStatements):
+		logger.info("getRunningState requesting one of the replicas in quorum randomly to check hash")
+		num = len(self.QuorumList)
+		# print("1. getRunningState =>"+str(num))
+		rand = random.randint(0,num)
+		rand = rand%num
+		# print("2. getRunningState =>"+str(rand))
+		checkpoint, Hisotry, replica = self.QuorumList[rand]
+		# print("2. getRunningState =>"+str(rand))
+		logger.info("requesting replica"+str(replica)+" to send  hash of it's running state")
+		send(('GET_RUNNING_STATE',), to=replica)
+
+		running_state_timeout=2
+		if await(self.runningStateFlag==True):
+			self.runningStateFlag=False
+		elif(timeout(running_state_timeout)):
+			logger.error("RUNNING_STATE timeout, calling again, calling running_state again")
+			getRunningState(self.caughtUpStatements)
+
+
+	def killOldReplicas():
+		logger.info("KILLING OLD REPLICAS")
+
+		for rep in self.replicas:
+			send(('KILLING_REPLICAS',), to=rep)
+			# os._exit(self.replicas[i])
+	def updateClient(replicas,replicaVerifyKeys):
+		logger.info("Sending the updated replicas from olympus to clients")
+		for i in self.clients:
+			logger.info("client: " + str(i) + "  updated")
+
+		for client in self.clients:
+			logger.info("sending the last executed result to client : "+ str(client))
+
+			if(client in self.clientLastResult.keys()):
+				logger.debug("sending the last executed result to client : "+ str(client)+"clientLastResult:  "+str(self.clientLastResult[client]))
+				send(('RESULT_FROM_OLYMPUS',self.clientLastResult[client],replicas,replicaVerifyKeys,), to=client)
+			else:
+				self.clientLastResult[client] = (None,None,None,None)
+				send(('RESULT_FROM_OLYMPUS',self.clientLastResult[client],replicas,replicaVerifyKeys,), to=client)
+
+
+	def updateClientForReconfiguration():
+		for client in self.clients:
+			send(('UNDERGOING_RECONFIGURATION',), to=client)
+
+	def receive(msg=('PROOF_OF_MISBEHAVIOUR', result_pr, res), from_=node):
+		logger.info("proof of misbehaviour recieved from client, validating the proof")
+		validation = config.checkForResultConsistency(result_pr,res, self.replicaVerifyKeys, "client")
+		if(not validation):
+			if( not self.reconfigIsCalled):
+				self.reconfigIsCalled = True
+				logger.info("calli")
+				updateClientForReconfiguration()
+				sendWedgeStatements()
+				self.currentnumofConfiguration = self.currentnumofConfiguration + 1
+				self.wedge_statement = []	
+				self.slotOpSuperset={}
+				self.caughtUpStatements =[]
+				self.runningStateReplicaHash=[]
+				self.isQuorumSatisfied=False
+			else:
+				logger.info("already reconfiguration in progress")
+
+
+

@@ -1,0 +1,221 @@
+import config
+import uuid
+import logging as logger
+import sys
+import time
+import nacl.utils
+import nacl.signing
+from nacl.public import PrivateKey, Box
+
+class Client(process):
+	dictionary_data;
+	history;
+	order_cache;
+	request_sequence
+	replicaRetransmissionCounter;
+	def setup(configFilePath,reqList,olympus,replicas, currentClient,allReplicaVerifyKeysMap, clientSignKey):
+		config.config_main(configFilePath)
+		logger.basicConfig(
+		format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
+		handlers=[
+		logger.FileHandler("{0}/{1}.log".format(config.readProperty("logfile_path"), config.readProperty("logfile_name"))),
+		logger.StreamHandler()
+		],
+		level=logger.INFO)
+		self.reqList=reqList
+		self.olympus=olympus
+		self.replicas=replicas
+		self.currentClient=currentClient
+		self.request_sequence={}
+		self.replicaRetransmissionCounter=0
+		self.operationFlag=False
+		self.dictdata={}
+
+		self.reconfigFlag=False
+		self.dictDataFromReplica={}
+		self.resultFromOlympus=False
+		self.resultO=''
+		self.requestIdRecieved=False
+		logger.info("******** Finished Client setup: "+str(currentClient)+" => "+str(reqList)+" *********")
+		
+ 
+	def main(): pass
+
+	def run():
+		logger.info("Client start called. Inside run()")
+		send(('SET_UP',), to=self.olympus)
+		received(('SET_UP',), from_=self.olympus)
+		logger.debug('Recieved Setup')
+		self.executeOperations()
+		
+
+	def dictionary():
+		dictionary = [('movie','star'),('jedi','luke skywalker'),('actor','irfan'),('criket','sachin'),('chupa','aditya')]
+		return dictionary
+
+	def sendOperationToReplicaNode(msg,requestId,operation,replicaId):
+		logger.info("Sending operations at Replicas, requestId: "+str(requestId)+", operation : "+str(operation))
+		requestId = signMessage(str(requestId))
+		operation = signMessage(str(operation))
+		send((msg,requestId, operation,self.currentClient,), to=replicaId)	
+
+	def executeRetransmissionTest():
+		# for operation in self.reqList:
+		# 	request_id = uuid.uuid4()
+		# 	self.request_sequence[request_id]=operation
+		logger.info("in executeRetransmissionTest")
+		for requestId,operation in self.request_sequence.items():
+			self.replicaRetransmissionCounter=0
+			output("executeRetransmissionTest requestId : ",requestId, ', operation', operation)
+			self.retransmission(requestId,operation)
+			break;
+
+	def executeTest():
+		expectedResult=config.readProperty('result[1]')
+
+	#Receive output for retransmission request from replica.
+	def receive(msg=("RETRANSMISSION",result_proof,replicaId,),):
+		self.replicaRetransmissionCounter+=1
+		logger.info("RETRANSMISSION Result received from replica : "+str(replicaId)+", result_proof : "+str(result_proof));
+		validation, result = config.validateResultProof(result_proof, allReplicaVerifyKeysMap)
+		logger.info("validation : "+str(validation)+", result : "+str(result))
+		if(validation):
+			logger.info("Result proof correctly validated! SUCCESS !!")
+			self.operationFlag=True
+		else:
+			logger.error("Result proof incorrect! FAILED !!")
+			self.operationFlag=False
+
+	def retransmission(request_id,operation):
+		logger.info("**********Starting Retransmission for request_id : "+str(request_id)+", operation : "+str(operation))
+		awaitResultQueue=[]
+		resultproof=str()
+		timeout = config.readProperty("client_retransmission_timeout")
+		for rnum,rep in enumerate(self.replicas):
+			sendOperationToReplicaNode('RETRANSMISSION',request_id,operation,rep)
+			awaitResultQueue.append(('FORWARD_SHUTTLE', resultproof ,))
+
+		# if (self.replicaRetransmissionCounter == len(self.replicas)):
+		if await(each(p in awaitResultQueue, has=received(('RETRANSMISSION', resultproof,)))):
+			logger.info("RETRANSMISSION complete !!!!")
+		elif(timeout(timeout)):
+			logger.error("RETRANSMISSION request Timed out!");
+
+	def receive(msg=('RESULT_FROM_TAIL',request_id,result_proof,result,dictdata,replicaId),):
+		logger.info("Result SHUTTLE reached from tail Replica : "+str(replicaId)+", dictdata : "+str(dictdata)+", request_id : "+str(request_id))
+		validation = config.checkForResultConsistency(result_proof,result, self.allReplicaVerifyKeysMap, "client")
+		if(validation):
+			client_dict_validation_flag = config.readProperty("client_dict_validation_flag")
+			logger.info("client_dict_validation_flag => "+str(client_dict_validation_flag))
+			if(client_dict_validation_flag=="True"):
+				self.dictDataFromReplica=dictdata
+				logger.info("checking dictionary objects for consistency. dictDataFromReplica : "+str(self.dictDataFromReplica)+", dictdata : "+str(self.dictdata))
+				if(str(self.dictDataFromReplica) == str(self.dictdata)):
+					logger.info("successfully validated dictionary content from replica!")
+					logger.info("Result proof correctly validated! SUCCESS !!")
+					self.operationFlag=True
+				else:
+					logger.error("Failed validation for dictionary content from replica!")
+					logger.error("Result proof incorrect! FAILED !!")
+					self.operationFlag=False
+			else:
+				logger.info("Result proof correctly validated! SUCCESS !!")
+				self.operationFlag=True
+		else:
+			logger.error("Result proof incorrect! FAILED | proof of misbehaviour!!")
+			self.operationFlag=False
+			self.dictdata=dictdata
+			callForReconfig(result_proof,result)
+
+	def callForReconfig(result_proof,result):
+		logger.info("PROOF_OF_MISBEHAVIOUR detecting. Calling for Reconfiguration to Olympus.")
+		send(('PROOF_OF_MISBEHAVIOUR',result_proof,result,), to=self.olympus)
+
+	def receive(msg=('RESULT_FROM_OLYMPUS',clientResult,replicas,replicaVerifyKeys,),from_=self.olympus):
+		logger.info("*************FINAL NEW REPLICAS RECEIVED FROM OLYMPUS*************\n")
+		self.resultFromOlympus=True
+		self.reconfigFlag = False
+		self.requestIdRecieved=True
+		self.replicas = replicas
+		self.allReplicaVerifyKeysMap = replicaVerifyKeys
+		self.resultO = clientResult
+
+	def receive(msg=('UNDERGOING_RECONFIGURATION',),from_=self.olympus):
+		logger.info("Replicas are undergoing Configuration !! Waiting.........\n")
+		self.reconfigFlag=True
+
+	def computeOperations(request_id,operation):
+		config.executeOperation(request_id, operation,self.dictdata)
+
+	def executeOperations():
+		logger.info("The Client:%s. workload to be performed : %s" %(currentClient, self.reqList))
+		result_proof=[]
+		timeout = config.readProperty("client_timeout")
+		retransmissionCounter = 0
+		maxRetransmissionCounter = config.readProperty('max_retransmission_counter')
+		result=''
+		replicaId=""
+		index=0
+		while  index < len(self.reqList):
+			logger.info("running for index " + str(index))
+			operation = self.reqList[index]
+			counter=0
+			logger.info("****************************************************************")
+			logger.info("process started for the operation : "+str(operation))
+			request_id = uuid.uuid4()
+			self.request_sequence[request_id]=operation
+			self.operationFlag=False
+			self.requestIdRecieved=False
+			computeOperations(request_id,operation)
+			self.resultFromOlympus=False
+			self.sendOperationToReplicaNode('PERFORM_OPERATION',request_id,operation,self.replicas[0])
+			if await(self.operationFlag==True):
+				logger.info("Operation executed : "+str(operation))
+			elif(timeout(timeout)):
+				logger.error("Client Timed out!!"+", request_id : "+str(request_id)+", operation : "+str(operation));
+				logger.info("ReconfigFlag : "+ str(self.reconfigFlag) + ", resultFromOlympus: "+str(self.resultFromOlympus))
+				if(self.reconfigFlag):
+					# print("inside the flag")
+					if await(not self.reconfigFlag):
+						# print("inside the await")
+						if await(self.resultFromOlympus):
+							logger.info("reconfigFlag : "+ str(self.reconfigFlag) + ", resultFromOlympus: "+str(self.resultFromOlympus))
+							# if(counter ==200):
+								# break
+							print(" ____________________waiting for reconfiguration to be completed____________")
+							counter = counter +1
+				else:
+					if(retransmissionCounter < maxRetransmissionCounter and not self.requestIdRecieved):
+						logger.info("Retransmission counter : "+str(retransmissionCounter))
+						retransmission(request_id,operation)
+						retransmissionCounter=retransmissionCounter+1
+			if self.resultFromOlympus==True :
+					logger.info("resultFromOlympus flag value   " + str(self.resultFromOlympus) )
+					# calling 
+					self.resultFromOlympus=False
+					logger.info("running for index before " + str(index))
+					res,oper,hashed,requestid =self.resultO
+					if(str(request_id) == str(requestid) or str(requestid)==str(None) ):
+						index = index - 1
+					logger.info("running for index after " + str(index))
+			index = index + 1
+			logger.info("running for index in the end " + str(index))
+
+	def signMessage(msg):
+		signedMsg = clientSignKey.sign(str.encode(msg))
+		logger.debug("orignal message : "+str(msg)+", signedMsg : "+str(signedMsg))
+		return signedMsg
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,63 @@
+import config
+import os
+import nacl.utils
+import nacl.encoding
+import nacl.signing
+from nacl.public import PrivateKey, Box
+import logging as logger
+import sys
+import getopt
+
+olympuss = import_da('Olympus')
+client = import_da('Client')
+replica = import_da('Replica')
+configFilePath=''
+
+clients = []
+replicas = []
+olympus = None
+
+def readConfigFileName():
+	argv=sys.argv[1:]
+	inputfile = ''
+	try:
+		opts, args = getopt.getopt(argv,"hi:",["file="])
+	except getopt.GetoptError:
+		# print('test.py -i <inputfile> -o <outputfile>')
+		sys.exit(2)
+	for opt, arg in opts:
+		if opt == '-h':
+			print('python3 -m da -n <name> -D RunSystem.da -f config_filename')
+			sys.exit()
+		elif opt in ("-i", "--file"):
+			global configFilePath
+			configFilePath = arg
+
+def setup_main():
+	readConfigFileName()
+	config.config_main(configFilePath);	# initialize configuration file
+	print("*************************************************************************")
+	print("      STARTING SYSTEM MAIN : CONFIG-FILE : "+configFilePath)
+	print("*************************************************************************")
+
+	logger.basicConfig(
+	    format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
+	    handlers=[
+	        logger.FileHandler("{0}/{1}.log".format(config.readProperty("logfile_path"), config.readProperty("logfile_name"))),
+	        logger.StreamHandler()
+	    ],
+	    level=logger.INFO)
+	logger.info("Removing old config file.")
+	os.remove((config.readProperty("logfile_path")+config.readProperty("logfile_name")+".log"))
+	
+def main():
+	setup_main();	
+	
+	###########Creating and setting up Olympus###############
+	olympus = new(olympuss.Olympus,num=1, at='onode')
+	setup(olympus,[configFilePath])
+	logger.info("olympus => "+str(olympus))
+	start(olympus)
+
+	await(False)
+	
